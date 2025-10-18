@@ -33,6 +33,11 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+type FormatLabelOptionType = {
+  flag: string;
+  label: string;
+};
+
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -121,7 +126,7 @@ export default function RegisterPage() {
   useEffect(() => setMounted(true), []);
 
   // ✅ Custom Option & SingleValue for react-select (to display flag + name)
-  const formatOptionLabel = (option: any) => (
+  const formatOptionLabel = (option: FormatLabelOptionType) => (
     <div className="flex items-center gap-2">
       <span className={`fi fi-${option.flag}`}></span>
       <span>{option.label}</span>
