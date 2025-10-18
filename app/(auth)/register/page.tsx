@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import Select from "react-select";
+import Select, {
+  FormatOptionLabelMeta,
+  GroupBase,
+  PropsValue,
+} from "react-select";
 import countryList from "react-select-country-list";
 import { Eye, EyeOff, Sun, Moon, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,29 +19,40 @@ import Link from "next/link";
 import { PulseLoader } from "react-spinners";
 import { BACKEND_URL } from "@/lib/constants";
 
-// ✅ Validation Schema
+// ----------------------
+// Types
+// ----------------------
+interface CountryOption {
+  value: string;
+  label: string;
+  flag: string;
+}
+
+// ----------------------
+// Validation Schema
+// ----------------------
 const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  // include flag so runtime shape matches Select options
   country: z
     .object({
       value: z.string(),
       label: z.string(),
+      flag: z.string(),
     })
-    .refine((val) => val?.value && val?.label, {
+    .refine((val) => Boolean(val?.value && val?.label), {
       message: "Country is required",
     }),
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-type FormatLabelOptionType = {
-  flag: string;
-  label: string;
-};
-
+// ----------------------
+// Component
+// ----------------------
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -54,12 +69,13 @@ export default function RegisterPage() {
     setValue,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    // you can set defaultValues here if desired
   });
 
   const watchedValues = watch();
 
-  // ✅ Country options with flags
-  const countryOptions = useMemo(() => {
+  // ✅ Country options with flags (typed)
+  const countryOptions: CountryOption[] = useMemo(() => {
     return countryList()
       .getData()
       .map((country) => ({
@@ -80,6 +96,7 @@ export default function RegisterPage() {
           (c) => c.label.toLowerCase() === countryName?.toLowerCase()
         );
         if (found) {
+          // set the full CountryOption object (matches schema)
           setValue("country", found);
         }
       } catch (err) {
@@ -126,7 +143,10 @@ export default function RegisterPage() {
   useEffect(() => setMounted(true), []);
 
   // ✅ Custom Option & SingleValue for react-select (to display flag + name)
-  const formatOptionLabel = (option: FormatLabelOptionType) => (
+  const formatOptionLabel = (
+    option: CountryOption,
+    meta?: FormatOptionLabelMeta<CountryOption>
+  ) => (
     <div className="flex items-center gap-2">
       <span className={`fi fi-${option.flag}`}></span>
       <span>{option.label}</span>
@@ -211,7 +231,7 @@ export default function RegisterPage() {
                 </label>
                 {errors.firstName && (
                   <p className="text-red-500 text-sm mt-1">
-                    {errors.firstName.message}
+                    {errors.firstName.message as string}
                   </p>
                 )}
               </div>
@@ -241,7 +261,7 @@ export default function RegisterPage() {
                 </label>
                 {errors.lastName && (
                   <p className="text-red-500 text-sm mt-1">
-                    {errors.lastName.message}
+                    {errors.lastName.message as string}
                   </p>
                 )}
               </div>
@@ -272,7 +292,7 @@ export default function RegisterPage() {
               </label>
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.email.message}
+                  {errors.email.message as string}
                 </p>
               )}
             </div>
@@ -283,77 +303,90 @@ export default function RegisterPage() {
                 <Controller
                   name="country"
                   control={control}
-                  render={({ field }) => (
-                    <Select
-                      {...field}
-                      instanceId="country-select"
-                      value={field.value}
-                      options={countryOptions}
-                      placeholder="Select Country"
-                      formatOptionLabel={formatOptionLabel}
-                      onChange={(selected) => field.onChange(selected)}
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: "transparent",
-                          borderColor: errors.country ? "red" : "#9ca3af",
-                          borderRadius: "0.375rem",
-                          boxShadow: "none",
-                          paddingTop: 8,
-                          paddingBottom: 8,
-                          color: theme === "dark" ? "#fff" : "#000",
-                        }),
-                        singleValue: (base) => ({
-                          ...base,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          color: theme === "dark" ? "#fff" : "#000",
-                        }),
-                        menu: (base) => ({
-                          ...base,
-                          zIndex: 50,
-                          backgroundColor:
-                            theme === "dark" ? "#1f2937" : "#fff",
-                          color: theme === "dark" ? "#fff" : "#000",
-                        }),
-                        option: (base, { isFocused, isSelected }) => ({
-                          ...base,
-                          backgroundColor: isSelected
-                            ? theme === "dark"
-                              ? "#10b981"
-                              : "#d1fae5"
-                            : isFocused
-                            ? theme === "dark"
-                              ? "#374151"
-                              : "#f3f4f6"
-                            : "transparent",
-                          color:
-                            isSelected || isFocused
+                  render={({ field }) => {
+                    // field.value has type CountryOption | undefined
+                    const value = field.value as CountryOption | undefined;
+
+                    return (
+                      <Select<CountryOption, false, GroupBase<CountryOption>>
+                        instanceId="country-select"
+                        // value must match option type
+                        value={value ?? null}
+                        options={countryOptions}
+                        placeholder="Select Country"
+                        formatOptionLabel={formatOptionLabel}
+                        // ensure onChange provides CountryOption to RHF
+                        onChange={(selected: PropsValue<CountryOption>) => {
+                          // selected can be null | CountryOption (PropsValue covers variants)
+                          // cast safely:
+                          const sel = Array.isArray(selected)
+                            ? (selected[0] as CountryOption)
+                            : (selected as CountryOption);
+                          field.onChange(sel);
+                        }}
+                        styles={{
+                          control: (base) => ({
+                            ...base,
+                            backgroundColor: "transparent",
+                            borderColor: errors.country ? "red" : "#9ca3af",
+                            borderRadius: "0.375rem",
+                            boxShadow: "none",
+                            paddingTop: 8,
+                            paddingBottom: 8,
+                            color: theme === "dark" ? "#fff" : "#000",
+                          }),
+                          singleValue: (base) => ({
+                            ...base,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            color: theme === "dark" ? "#fff" : "#000",
+                          }),
+                          menu: (base) => ({
+                            ...base,
+                            zIndex: 50,
+                            backgroundColor:
+                              theme === "dark" ? "#1f2937" : "#fff",
+                            color: theme === "dark" ? "#fff" : "#000",
+                          }),
+                          option: (base, { isFocused, isSelected }) => ({
+                            ...base,
+                            backgroundColor: isSelected
                               ? theme === "dark"
-                                ? "#fff"
-                                : "#000"
-                              : theme === "dark"
-                              ? "#d1d5db"
-                              : "#000",
-                          cursor: "pointer",
-                        }),
-                        placeholder: (base) => ({
-                          ...base,
-                          color: theme === "dark" ? "#9ca3af" : "#6b7280",
-                        }),
-                        input: (base) => ({
-                          ...base,
-                          color: theme === "dark" ? "#fff" : "#000",
-                        }),
-                      }}
-                    />
-                  )}
+                                ? "#10b981"
+                                : "#d1fae5"
+                              : isFocused
+                              ? theme === "dark"
+                                ? "#374151"
+                                : "#f3f4f6"
+                              : "transparent",
+                            color:
+                              isSelected || isFocused
+                                ? theme === "dark"
+                                  ? "#fff"
+                                  : "#000"
+                                : theme === "dark"
+                                ? "#d1d5db"
+                                : "#000",
+                            cursor: "pointer",
+                          }),
+                          placeholder: (base) => ({
+                            ...base,
+                            color: theme === "dark" ? "#9ca3af" : "#6b7280",
+                          }),
+                          input: (base) => ({
+                            ...base,
+                            color: theme === "dark" ? "#fff" : "#000",
+                          }),
+                        }}
+                      />
+                    );
+                  }}
                 />
               )}
               {errors.country && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.country.message}
+                  {errors.country.message as string}
                 </p>
               )}
             </div>
@@ -390,7 +423,7 @@ export default function RegisterPage() {
               </button>
               {errors.password && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.password.message}
+                  {errors.password.message as string}
                 </p>
               )}
             </div>
