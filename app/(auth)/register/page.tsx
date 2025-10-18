@@ -21,14 +21,17 @@ const registerSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  country: z.object(
-    {
+  country: z
+    .object({
       value: z.string(),
       label: z.string(),
-    },
-    { error: "Country is required" }
-  ),
+    })
+    .refine((val) => val?.value && val?.label, {
+      message: "Country is required",
+    }),
 });
+
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -44,7 +47,7 @@ export default function RegisterPage() {
     formState: { errors },
     watch,
     setValue,
-  } = useForm({
+  } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 
@@ -81,8 +84,8 @@ export default function RegisterPage() {
     fetchCountry();
   }, [countryOptions, setValue]);
 
-  // ✅ Submit Handler (simulate backend submission)
-  const onSubmit = async (data: any) => {
+  // ✅ Submit Handler
+  const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
     setMessage(null);
     try {
@@ -203,7 +206,7 @@ export default function RegisterPage() {
                 </label>
                 {errors.firstName && (
                   <p className="text-red-500 text-sm mt-1">
-                    {errors.firstName.message as string}
+                    {errors.firstName.message}
                   </p>
                 )}
               </div>
@@ -233,7 +236,7 @@ export default function RegisterPage() {
                 </label>
                 {errors.lastName && (
                   <p className="text-red-500 text-sm mt-1">
-                    {errors.lastName.message as string}
+                    {errors.lastName.message}
                   </p>
                 )}
               </div>
@@ -264,12 +267,12 @@ export default function RegisterPage() {
               </label>
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.email.message as string}
+                  {errors.email.message}
                 </p>
               )}
             </div>
 
-            {/* ✅ Country Dropdown (Dark Mode Visible + Hydration Fixed) */}
+            {/* Country Dropdown */}
             <div className="relative">
               {mounted && (
                 <Controller
@@ -278,7 +281,7 @@ export default function RegisterPage() {
                   render={({ field }) => (
                     <Select
                       {...field}
-                      instanceId="country-select" // 👈 prevents hydration mismatch
+                      instanceId="country-select"
                       value={field.value}
                       options={countryOptions}
                       placeholder="Select Country"
@@ -345,7 +348,7 @@ export default function RegisterPage() {
               )}
               {errors.country && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.country.message as string}
+                  {errors.country.message}
                 </p>
               )}
             </div>
@@ -382,7 +385,7 @@ export default function RegisterPage() {
               </button>
               {errors.password && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.password.message as string}
+                  {errors.password.message}
                 </p>
               )}
             </div>

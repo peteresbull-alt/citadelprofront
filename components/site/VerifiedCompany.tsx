@@ -109,7 +109,7 @@ const VerifiedCompanySection = () => {
                   TSLA
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Today's champion pair
+                  Today&apos;s champion pair
                 </p>
               </div>
             </ScrollReveal>

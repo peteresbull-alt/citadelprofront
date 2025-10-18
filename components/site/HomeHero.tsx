@@ -21,7 +21,7 @@ const HomeHero = () => {
             </h3>
             <p className="text-base">
               CitadelPro empowers you to mirror real-time stock and options
-              trades from top-performing traders. Whether you're following
+              trades from top-performing traders. Whether you&apos;re following
               tickers, contracts, or strategic options moves, our platform
               brings precision, flexibility, and transparency—straight to your
               fingertips.

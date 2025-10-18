@@ -163,10 +163,10 @@ const CryptoHeroSection = () => {
                 <br />
                 <span className="dark:text-gray-300 text-gray-900 font-semibold">
                   Citadel empowers you to mirror real-time stock and options
-                  trades from top-performing traders. Whether you're following
-                  tickers, contracts, or strategic options moves, our platform
-                  brings precision, flexibility, and transparency—straight to
-                  your fingertips.
+                  trades from top-performing traders. Whether you&apos;re
+                  following tickers, contracts, or strategic options moves, our
+                  platform brings precision, flexibility, and
+                  transparency—straight to your fingertips.
                 </span>
               </p>
 
