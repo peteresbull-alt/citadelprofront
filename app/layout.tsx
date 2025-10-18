@@ -15,11 +15,9 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "CitadelMarketPro - Your Passport to Global Investment",
+  title: "CitadelPro - Your Goal to Global Investment",
   description:
-    "At CitadelMarketPro, our clients are at the heart of everything we do. \
-    We are dedicated to providing a safe, transparent, and secure trading environment, \
-    reinforced by robust government regulation under the FSCA.",
+    "Copy Stocks, Options & Contracts with Precision. The Premier Copy-Trading Hub for Options Traders",
 };
 
 export default function RootLayout({
