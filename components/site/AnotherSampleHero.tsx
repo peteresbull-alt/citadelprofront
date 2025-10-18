@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import ScrollReveal from "./ScrollReveal";
+import { useRouter } from "next/navigation";
 // import ScrollReveal from "@/components/ui/ScrollReveal"; // ✅ Add this import
 
 interface Particle {
@@ -132,6 +133,8 @@ const CryptoHeroSection = () => {
   const [isHovered, setIsHovered] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
+  const router = useRouter();
+
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-black dark:bg-white">
       <ParticlesBackground />
@@ -175,6 +178,7 @@ const CryptoHeroSection = () => {
                 <button
                   onMouseEnter={() => setIsHovered(true)}
                   onMouseLeave={() => setIsHovered(false)}
+                  onClick={() => router.push("/register")}
                   className="group relative px-10 py-5 text-lg font-medium text-green-900 hover:text-white dark:text-white rounded-full overflow-hidden transition-all duration-300"
                   style={{
                     background: isHovered

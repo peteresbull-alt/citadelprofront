@@ -13,24 +13,24 @@ import ScrollReveal from "./ScrollReveal";
 
 const teamMembers = [
   {
-    name: "Sarah Johnson",
+    name: "Troy Johnson",
     position: "Chief Executive Officer",
-    image: "/team1.jpg",
+    image: "/images/team_2.jpg",
+  },
+  {
+    name: "Emma Smith",
+    position: "Chief Technology Officer",
+    image: "/images/young-woman-working.jpg",
   },
   {
     name: "Michael Lee",
     position: "Head of Trading Operations",
-    image: "/team2.jpg",
+    image: "/images/team_1.jpg",
   },
   {
-    name: "Emma Davis",
+    name: "Sarah Davis",
     position: "Lead Financial Analyst",
-    image: "/team3.jpg",
-  },
-  {
-    name: "James Smith",
-    position: "Chief Technology Officer",
-    image: "/team4.jpg",
+    image: "/images/pro_woman_2.jpg",
   },
 ];
 
