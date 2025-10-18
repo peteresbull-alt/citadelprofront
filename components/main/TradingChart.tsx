@@ -3,6 +3,11 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
+// ✅ Define a minimal TradingView type locally
+type TradingViewAPI = {
+  widget: new (options: Record<string, unknown>) => void;
+};
+
 export default function TradingChart({ symbol }: { symbol?: string | null }) {
   const container = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
@@ -19,8 +24,10 @@ export default function TradingChart({ symbol }: { symbol?: string | null }) {
     script.async = true;
 
     script.onload = () => {
-      if (!window.TradingView) return; // Ensure TradingView loaded
-      new window.TradingView.widget({
+      const w = window as unknown as { TradingView?: TradingViewAPI };
+      if (!w.TradingView) return; // ✅ Type-safe check
+
+      new w.TradingView.widget({
         autosize: true,
         symbol: symbol || "EURUSD",
         interval: "1",
@@ -34,7 +41,7 @@ export default function TradingChart({ symbol }: { symbol?: string | null }) {
 
     el.appendChild(script);
 
-    // ✅ Safe cleanup
+    // ✅ Cleanup
     return () => {
       if (container.current) {
         container.current.innerHTML = "";
