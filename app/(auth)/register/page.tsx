@@ -153,11 +153,16 @@ export default function RegisterPage() {
 
       // Redirect after a short delay
       setTimeout(() => router.push("/login"), 1500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration error:", error);
-      setMessage(
-        `❌ ${error.message || "Something went wrong. Please try again."}`
-      );
+
+      // Type-safe error message extraction
+      let errorMessage = "Something went wrong. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      setMessage(`❌ ${errorMessage}`);
     } finally {
       setLoading(false);
     }
