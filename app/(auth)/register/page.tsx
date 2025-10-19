@@ -18,6 +18,7 @@ import { useTheme } from "next-themes";
 import Link from "next/link";
 import { PulseLoader } from "react-spinners";
 import { BACKEND_URL } from "@/lib/constants";
+import { useRouter } from "next/navigation";
 
 // ----------------------
 // Types
@@ -59,6 +60,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
+
+  const router = useRouter();
 
   const {
     register,
@@ -106,10 +109,10 @@ export default function RegisterPage() {
     fetchCountry();
   }, [countryOptions, setValue]);
 
-  // ✅ Submit Handler
   const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
     setMessage(null);
+
     try {
       const payload = {
         first_name: data.firstName,
@@ -125,16 +128,36 @@ export default function RegisterPage() {
         body: JSON.stringify(payload),
       });
 
+      const result = await res.json();
+
+      // ✅ Handle error responses gracefully
       if (!res.ok) {
-        throw new Error("Failed to register user");
+        let errorMessage = "Registration failed. Please try again.";
+
+        // Case 1: Django returns {"error": "User already exists"}
+        if (result?.error) {
+          if (Array.isArray(result.error)) {
+            // Password validation errors come as a list
+            errorMessage = result.error.join(" ");
+          } else if (typeof result.error === "string") {
+            errorMessage = result.error;
+          }
+        }
+
+        throw new Error(errorMessage);
       }
 
-      const result = await res.json();
-      setMessage("✅ Registration successful!");
+      // ✅ Success handling
+      setMessage("✅ Registration successful! Redirecting to login...");
       console.log("Registration successful:", result);
-    } catch (error) {
-      console.error(error);
-      setMessage("❌ Registration failed. Please try again.");
+
+      // Redirect after a short delay
+      setTimeout(() => router.push("/login"), 1500);
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setMessage(
+        `❌ ${error.message || "Something went wrong. Please try again."}`
+      );
     } finally {
       setLoading(false);
     }
