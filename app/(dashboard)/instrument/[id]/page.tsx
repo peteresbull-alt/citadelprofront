@@ -2,7 +2,7 @@
 
 import TradingChart from "@/components/main/TradingChart";
 import { useInstrumentStore } from "@/hooks/useInstrumentStore";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 export default function InstrumentPage() {
   const instrument = useInstrumentStore((s) => s.selectedInstrument);
   const router = useRouter();
-  const param = useParams();
+  
 
   // Modal state
   const [tradeType, setTradeType] = useState<"buy" | "sell" | null>(null);

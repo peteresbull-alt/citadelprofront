@@ -131,7 +131,7 @@ const ParticlesBackground = () => {
 
 const CryptoHeroSection = () => {
   const [isHovered, setIsHovered] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  // const [showChat, setShowChat] = useState(false);
 
   const router = useRouter();
 

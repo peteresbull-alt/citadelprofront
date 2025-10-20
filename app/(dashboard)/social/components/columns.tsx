@@ -37,15 +37,21 @@ function ActionButton({ id }: { id: number }) {
 export const columns: ColumnDef<Trader>[] = [
   {
     accessorKey: "name",
-    header: ({ column }) => (
-      <span className="text-gray-800 dark:text-gray-100">Leader Name</span>
-    ),
+    header: ({ column }) => {
+      console.log(column);
+      return (
+        <span className="text-gray-800 dark:text-gray-100">Leader Name</span>
+      );
+    },
     cell: ({ row }) => {
       const trader = row.original;
       const avatarUrl =
         trader.avatar && trader.avatar.startsWith("http")
           ? trader.avatar
           : "/default-avatar.png";
+
+      console.log("Trader to load: ", avatarUrl);
+      console.log("Trader type to load: ", typeof avatarUrl);
 
       return (
         <div className="flex items-center gap-3">

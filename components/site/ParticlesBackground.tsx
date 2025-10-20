@@ -1,5 +1,5 @@
-import { useTheme } from "next-themes";
-import React, { useEffect, useRef, useState } from "react";
+// import { useTheme } from "next-themes";
+import React, { useEffect, useRef } from "react";
 
 interface Particle {
   x: number;
@@ -13,7 +13,7 @@ interface Particle {
 
 const ParticlesBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const { theme, setTheme } = useTheme();
+  // const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;

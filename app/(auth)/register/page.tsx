@@ -174,12 +174,15 @@ export default function RegisterPage() {
   const formatOptionLabel = (
     option: CountryOption,
     meta?: FormatOptionLabelMeta<CountryOption>
-  ) => (
-    <div className="flex items-center gap-2">
-      <span className={`fi fi-${option.flag}`}></span>
-      <span>{option.label}</span>
-    </div>
-  );
+  ) => {
+    console.log(meta);
+    return (
+      <div className="flex items-center gap-2">
+        <span className={`fi fi-${option.flag}`}></span>
+        <span>{option.label}</span>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row gap-10 bg-white dark:bg-[#090909] text-black dark:text-white transition-colors duration-300">

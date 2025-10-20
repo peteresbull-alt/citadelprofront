@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { ArrowLeft, Moon, Sun } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useEffect, useState } from "react";
@@ -9,8 +9,7 @@ import { PulseLoader } from "react-spinners";
 import { BACKEND_URL } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useTheme } from "next-themes";
-import { Switch } from "@/components/ui/switch";
+// import { useTheme } from "next-themes";
 
 type FormValues = {
   firstName: string;
@@ -26,7 +25,7 @@ export default function PersonalDetailsPage() {
   const router = useRouter();
   const { user } = useUserProfile();
   const [loading, setLoading] = useState(false);
-  const { theme, setTheme } = useTheme();
+  // const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   const {
@@ -119,8 +118,6 @@ export default function PersonalDetailsPage() {
           <ArrowLeft className="w-6 h-6" />
           <h1 className="text-lg font-semibold">Personal Details</h1>
         </div>
-
-        
       </div>
 
       {/* Form */}

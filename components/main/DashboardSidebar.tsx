@@ -2,12 +2,12 @@
 
 import { BarChart2, Briefcase, Menu, Users, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
+// import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 const DashboardSidebar = () => {
   const router = useRouter();
-  const { theme } = useTheme();
+  // const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);

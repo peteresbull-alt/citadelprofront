@@ -2,7 +2,7 @@ import Image from "next/image";
 import React from "react";
 import Container from "./Container";
 import Link from "next/link";
-import { UserCircle, UserCircle2Icon, UserIcon } from "lucide-react";
+import { UserCircle2Icon } from "lucide-react";
 import { Button } from "../ui/button";
 import { ModeToggle } from "../mode/toggleModeButton";
 

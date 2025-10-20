@@ -1,9 +1,6 @@
 "use client";
 import React, { useState } from "react";
 import {
-  DollarSign,
-  Send,
-  Clock,
   LineChart,
   Shield,
   GraduationCap,
@@ -11,7 +8,7 @@ import {
   Globe,
 } from "lucide-react";
 import ScrollReveal from "./ScrollReveal";
-// import ScrollReveal from "@/components/ui/ScrollReveal"; // ✅ Scroll animation wrapper
+
 
 const ServicesSection = () => {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);

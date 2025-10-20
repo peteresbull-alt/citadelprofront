@@ -119,6 +119,8 @@ const DepositPage = () => {
     defaultValues: { receipt: null },
   });
 
+  console.log(errors);
+
   // ✅ Fetch wallets
   useEffect(() => {
     const fetchWallets = async () => {
