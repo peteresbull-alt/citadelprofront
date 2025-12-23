@@ -1,0 +1,699 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import {
+  Copy,
+  Check,
+  Users,
+  DollarSign,
+  Gift,
+  Share2,
+  AlertCircle,
+  X,
+  DownloadCloud,
+  RefreshCw,
+} from "lucide-react";
+import { BACKEND_URL } from "@/lib/constants";
+import DashboardNavbar from "@/components/main/DashboardNavbar";
+import { useRouter } from "next/navigation";
+
+interface ReferralData {
+  referral_code: string;
+  referral_link: string;
+  total_referrals: number;
+  total_earnings: string;
+  referral_bonus_rate: number;
+}
+
+interface Referral {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  date_joined: string;
+  has_deposited: boolean;
+  bonus_earned: string;
+}
+
+export default function ReferralPage() {
+  const router = useRouter();
+
+  const [referralData, setReferralData] = useState<ReferralData | null>(null);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalCopied, setModalCopied] = useState(false);
+
+  // New states for generating referral code
+  const [generating, setGenerating] = useState(false);
+  const [generateMessage, setGenerateMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchReferralData();
+    fetchReferrals();
+  }, []);
+
+  // Close modal on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowModal(false);
+      }
+    };
+
+    if (showModal) {
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
+    };
+  }, [showModal]);
+
+  const fetchReferralData = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+
+      if (!token) {
+        setError("No authentication token found. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
+      const frontendUrl = window.location.origin;
+
+      const response = await fetch(`${BACKEND_URL}/referral/info/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${token}`,
+          "X-Frontend-URL": frontendUrl,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setReferralData(data.referral_data);
+        setError(null);
+      } else {
+        setError(data.error || "Failed to fetch referral data");
+      }
+    } catch (error) {
+      console.error("Error fetching referral data:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch referral data. Please check your connection."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReferrals = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/referral/list/`, {
+        method: "GET",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch referrals");
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setReferrals(data.referrals);
+      }
+    } catch (error) {
+      console.error("Error fetching referrals:", error);
+    }
+  };
+
+  const generateReferralCode = async () => {
+    // If user already has a code, ask for confirmation
+    if (referralData?.referral_code) {
+      const confirmed = window.confirm(
+        "Are you sure you want to regenerate your referral code? Your old code will no longer work."
+      );
+      if (!confirmed) return;
+    }
+
+    setGenerating(true);
+    setGenerateMessage(null);
+
+    try {
+      const token = localStorage.getItem("authToken");
+
+      if (!token) {
+        setGenerateMessage("❌ Please log in to generate a referral code");
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/referral/generate/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ force: true }), // Allow regeneration
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setGenerateMessage("✅ Referral code generated successfully!");
+        // Refresh referral data to get the new code
+        await fetchReferralData();
+        setTimeout(() => setGenerateMessage(null), 3000);
+      } else {
+        setGenerateMessage(
+          `❌ ${data.error || "Failed to generate referral code"}`
+        );
+        setTimeout(() => setGenerateMessage(null), 5000);
+      }
+    } catch (error) {
+      console.error("Error generating referral code:", error);
+      setGenerateMessage("❌ Failed to generate referral code");
+      setTimeout(() => setGenerateMessage(null), 5000);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (referralData) {
+      navigator.clipboard.writeText(referralData.referral_link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleModalCopy = () => {
+    if (referralData) {
+      navigator.clipboard.writeText(referralData.referral_link);
+      setModalCopied(true);
+      setTimeout(() => setModalCopied(false), 2000);
+    }
+  };
+
+  const handleShareClick = () => {
+    setShowModal(true);
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#061124] dark:bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#061124] dark:bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-red-500/10 border border-red-500/30 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+            <h2 className="text-xl font-bold text-red-500">Error</h2>
+          </div>
+          <p className="text-slate-300 dark:text-slate-700 mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchReferralData();
+              fetchReferrals();
+            }}
+            className="w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-all"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <section className="w-full px-4 sm:px-6 lg:px-8 py-20 bg-[#061124] dark:bg-slate-50 min-h-screen">
+      <DashboardNavbar />
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        {/* Header Card */}
+        <div className="bg-gradient-to-br from-emerald-800 to-emerald-900 dark:from-emerald-600 dark:to-emerald-700 rounded-2xl p-6 sm:p-8 text-white shadow-2xl">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-white/20 rounded-full">
+              <Gift className="w-6 h-6 sm:w-8 sm:h-8" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Reward Center</h1>
+          </div>
+
+          <p className="text-emerald-50 dark:text-emerald-100 text-sm sm:text-base mb-6">
+            Invite friends and earn rewards! Get{" "}
+            <span className="font-bold text-lg">
+              {referralData?.referral_bonus_rate || 10}%
+            </span>{" "}
+            of their first deposit.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Total Referrals */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-5 h-5 text-emerald-200" />
+                <p className="text-sm text-emerald-100">Total Referrals</p>
+              </div>
+              <p className="text-3xl font-bold">
+                {referralData?.total_referrals || 0}
+              </p>
+            </div>
+
+            {/* Total Earnings */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="w-5 h-5 text-emerald-200" />
+                <p className="text-sm text-emerald-100">Total Earned</p>
+              </div>
+              <p className="text-3xl font-bold">
+                $
+                {parseFloat(referralData?.total_earnings || "0").toLocaleString(
+                  undefined,
+                  {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Referral Link Card */}
+        <div className="bg-slate-800/40 dark:bg-white border border-slate-700/40 dark:border-slate-200 rounded-xl sm:rounded-2xl p-5 sm:p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Share2 className="w-6 h-6 text-emerald-500" />
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-100 dark:text-slate-900">
+              Your Referral Link
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 bg-slate-900/60 dark:bg-slate-100 border border-slate-700/40 dark:border-slate-300 rounded-lg px-4 py-3 overflow-x-auto">
+                <p className="text-sm text-slate-300 dark:text-slate-700 font-mono whitespace-nowrap">
+                  {referralData?.referral_link || ""}
+                </p>
+              </div>
+              <button
+                onClick={handleCopyLink}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-lg font-medium transition-all shadow-lg whitespace-nowrap"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-5 h-5" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-5 h-5" />
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Referral Code Display */}
+            <div className="bg-emerald-500/10 dark:bg-emerald-50 border border-emerald-500/30 dark:border-emerald-200 rounded-lg p-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-400 dark:text-slate-600 uppercase tracking-wider mb-1">
+                    Your Referral Code
+                  </p>
+                  {referralData?.referral_code ? (
+                    <p className="text-2xl font-bold text-emerald-400 dark:text-emerald-600 font-mono break-all">
+                      {referralData.referral_code}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-500 dark:text-slate-600 italic">
+                      No referral code yet
+                    </p>
+                  )}
+                </div>
+
+                {/* Always show button - Generate or Regenerate */}
+                <button
+                  onClick={generateReferralCode}
+                  disabled={generating}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm flex items-center gap-2 whitespace-nowrap"
+                >
+                  {generating ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      <span>
+                        {referralData?.referral_code
+                          ? "Regenerate"
+                          : "Generate"}
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Generate Message */}
+              {generateMessage && (
+                <p
+                  className={`text-sm mt-3 ${
+                    generateMessage.startsWith("✅")
+                      ? "text-emerald-600 dark:text-emerald-700"
+                      : "text-red-500"
+                  }`}
+                >
+                  {generateMessage}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* How It Works */}
+        <div className="bg-slate-800/40 dark:bg-white border border-slate-700/40 dark:border-slate-200 rounded-xl sm:rounded-2xl p-5 sm:p-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-100 dark:text-slate-900 mb-6">
+            Complete tasks & earn!!!
+          </h2>
+
+          <p className="text-slate-300 dark:text-slate-700 mb-6 text-sm sm:text-base">
+            Earn points by completing daily and weekly tasks. Redeem your points
+            for exclusive rewards and bonuses!
+          </p>
+
+          <div className="space-y-4">
+            {/* Task 1: Refer a Friend */}
+            <div className="bg-slate-900/40 dark:bg-slate-50 border border-slate-700/40 dark:border-slate-200 rounded-xl p-4 sm:p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-emerald-500/20 dark:bg-emerald-100 rounded-full flex-shrink-0">
+                  <Users className="w-6 h-6 text-emerald-400 dark:text-emerald-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg sm:text-xl font-bold text-yellow-400 dark:text-yellow-600 mb-2">
+                    Refer a Friend
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-300 dark:text-slate-700 mb-4">
+                    Invite your friends to join and get{" "}
+                    {referralData?.referral_bonus_rate || 10}% of their first
+                    deposit!
+                  </p>
+                  <button
+                    onClick={handleShareClick}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-all"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share Link
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Task 2: First Deposit Bonus */}
+            <div className="bg-slate-900/40 dark:bg-slate-50 border border-slate-700/40 dark:border-slate-200 rounded-xl p-4 sm:p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-emerald-500/20 dark:bg-emerald-100 rounded-full flex-shrink-0">
+                  <DollarSign className="w-6 h-6 text-emerald-400 dark:text-emerald-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg sm:text-xl font-bold text-yellow-400 dark:text-yellow-600 mb-2">
+                    +10%
+                  </h3>
+                  <p className="text-sm sm:text-base text-slate-300 dark:text-slate-700">
+                    Deposit and get 10% bonus on your first deposit! (min
+                    $100.00)
+                  </p>
+
+                  <button
+                    onClick={() => router.push("/deposit")}
+                    className="inline-flex items-center mt-3 gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-all"
+                  >
+                    <DownloadCloud className="w-4 h-4" />
+                    Deposit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Referrals List */}
+        <div className="bg-slate-800/40 dark:bg-white border border-slate-700/40 dark:border-slate-200 rounded-xl sm:rounded-2xl p-5 sm:p-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-100 dark:text-slate-900 mb-6">
+            Your Referrals ({referrals.length})
+          </h2>
+
+          {referrals.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 text-slate-400 dark:text-slate-500 mx-auto mb-4" />
+              <p className="text-slate-400 dark:text-slate-600">
+                No referrals yet. Start sharing your link!
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-700/40 dark:border-slate-200">
+                      <th className="text-left py-4 px-4 text-sm font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
+                        User
+                      </th>
+                      <th className="text-left py-4 px-4 text-sm font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="text-left py-4 px-4 text-sm font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
+                        Joined
+                      </th>
+                      <th className="text-left py-4 px-4 text-sm font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="text-left py-4 px-4 text-sm font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">
+                        Earned
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {referrals.map((referral) => (
+                      <tr
+                        key={referral.id}
+                        className="border-b border-slate-700/20 dark:border-slate-100 hover:bg-slate-900/20 dark:hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="py-5 px-4 text-sm text-slate-300 dark:text-slate-700 font-medium">
+                          {referral.first_name} {referral.last_name}
+                        </td>
+                        <td className="py-5 px-4 text-sm text-slate-300 dark:text-slate-700">
+                          {referral.email}
+                        </td>
+                        <td className="py-5 px-4 text-sm text-slate-300 dark:text-slate-700">
+                          {formatDate(referral.date_joined)}
+                        </td>
+                        <td className="py-5 px-4">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-md text-sm font-medium ${
+                              referral.has_deposited
+                                ? "bg-green-500/20 dark:bg-green-100 text-green-400 dark:text-green-600"
+                                : "bg-yellow-500/20 dark:bg-yellow-100 text-yellow-400 dark:text-yellow-600"
+                            }`}
+                          >
+                            {referral.has_deposited ? "Deposited" : "Pending"}
+                          </span>
+                        </td>
+                        <td className="py-5 px-4 text-sm font-semibold text-emerald-400 dark:text-emerald-600">
+                          $
+                          {parseFloat(referral.bonus_earned).toLocaleString(
+                            undefined,
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile/Tablet Card View */}
+              <div className="lg:hidden space-y-4">
+                {referrals.map((referral) => (
+                  <div
+                    key={referral.id}
+                    className="bg-slate-900/40 dark:bg-slate-50 border border-slate-700/40 dark:border-slate-200 rounded-xl p-4 space-y-3"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-slate-200 dark:text-slate-800">
+                          {referral.first_name} {referral.last_name}
+                        </p>
+                        <p className="text-xs text-slate-400 dark:text-slate-600">
+                          {referral.email}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-block px-3 py-1 rounded-md text-xs font-medium ${
+                          referral.has_deposited
+                            ? "bg-green-500/20 dark:bg-green-100 text-green-400 dark:text-green-600"
+                            : "bg-yellow-500/20 dark:bg-yellow-100 text-yellow-400 dark:text-yellow-600"
+                        }`}
+                      >
+                        {referral.has_deposited ? "Deposited" : "Pending"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-700/20 dark:border-slate-200">
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-600">
+                          Joined
+                        </p>
+                        <p className="text-sm text-slate-300 dark:text-slate-700">
+                          {formatDate(referral.date_joined)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-400 dark:text-slate-600">
+                          Earned
+                        </p>
+                        <p className="text-lg font-bold text-emerald-400 dark:text-emerald-600">
+                          $
+                          {parseFloat(referral.bonus_earned).toLocaleString(
+                            undefined,
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Share Modal */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-slate-800/90 dark:bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 sm:p-8 relative border border-slate-700/40 dark:border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-700/50 dark:hover:bg-slate-100 transition-colors"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+            </button>
+
+            {/* Modal Content */}
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-100 dark:text-slate-900 mb-3">
+                  Invite Friends & Earn Rewards
+                </h2>
+                <p className="text-slate-300 dark:text-slate-700 text-sm sm:text-base">
+                  Share your referral link below. When your friends sign up and
+                  start trading, you both earn rewards!
+                </p>
+              </div>
+
+              {/* Referral Link Section */}
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-100 dark:text-slate-900">
+                  Your Referral Link:
+                </label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    value={referralData?.referral_link || ""}
+                    readOnly
+                    className="flex-1 px-4 py-3 bg-slate-900/60 dark:bg-slate-100 border border-slate-700/40 dark:border-slate-300 rounded-lg text-sm text-slate-300 dark:text-slate-700 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={handleModalCopy}
+                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white rounded-lg font-medium transition-all shadow-lg flex items-center justify-center gap-2 whitespace-nowrap"
+                  >
+                    {modalCopied ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-5 h-5" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Referral Code in Modal */}
+              <div className="bg-emerald-500/10 dark:bg-emerald-50 border border-emerald-500/30 dark:border-emerald-200 rounded-lg p-4">
+                <p className="text-xs text-slate-400 dark:text-slate-600 uppercase tracking-wider mb-1">
+                  Your Referral Code
+                </p>
+                <p className="text-xl font-bold text-emerald-400 dark:text-emerald-600 font-mono">
+                  {referralData?.referral_code || "N/A"}
+                </p>
+              </div>
+
+              {/* Footer Text */}
+              <p className="text-xs sm:text-sm text-slate-400 dark:text-slate-600">
+                You can track your referrals and rewards in your account
+                dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}

@@ -1,0 +1,1294 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import DashboardNavbar from "@/components/main/DashboardNavbar";
+import { BACKEND_URL } from "@/lib/constants";
+import { PulseLoader } from "react-spinners";
+import { Shield, Lock } from "lucide-react";
+
+type Tab = "profile" | "security" | "payment";
+
+interface EditModalData {
+  type:
+    | "name"
+    | "phone"
+    | "country"
+    | "password"
+    | "btc"
+    | "eth"
+    | "usdt"
+    | "disable2fa"
+    | null;
+}
+
+interface UserSettings {
+  profile: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    country: string;
+    region: string;
+    city: string;
+    account_id: string;
+    is_verified: boolean;
+    account_status: string;
+  };
+  payment_methods: {
+    btc: {
+      address: string;
+      has_method: boolean;
+    };
+    eth: {
+      address: string;
+      network: string;
+      has_method: boolean;
+    };
+    usdt: {
+      address: string;
+      network: string;
+      method_type: string;
+      has_method: boolean;
+    };
+  };
+}
+
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState<Tab>("profile");
+  const [editModal, setEditModal] = useState<EditModalData>({ type: null });
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // ✅ NEW: 2FA state
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [toggling2FA, setToggling2FA] = useState(false);
+
+  // User settings data
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+
+  // Form data
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    country: "",
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+    cryptoAddress: "",
+    usdtNetwork: "USDT_TRC20",
+    disable2faPassword: "", // ✅ NEW: For disabling 2FA
+  });
+
+  // Fetch user settings on mount
+  useEffect(() => {
+    fetchUserSettings();
+    fetch2FAStatus(); // ✅ NEW: Fetch 2FA status
+  }, []);
+
+  const fetchUserSettings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Authentication token not found. Please log in.");
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/settings/`, {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user settings");
+      }
+
+      const data = await response.json();
+      setUserSettings(data);
+    } catch (err) {
+      console.error("Error fetching settings:", err);
+      setError("Failed to load settings. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ NEW: Fetch 2FA status
+  const fetch2FAStatus = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
+
+      const response = await fetch(`${BACKEND_URL}/2fa-status/`, {
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTwoFactorEnabled(data.two_factor_enabled);
+      }
+    } catch (err) {
+      console.error("Error fetching 2FA status:", err);
+    }
+  };
+
+  // ✅ NEW: Enable 2FA
+  const handleEnable2FA = async () => {
+    try {
+      setToggling2FA(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Authentication token not found. Please log in.");
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/enable-2fa/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to enable 2FA");
+      }
+
+      setTwoFactorEnabled(true);
+      setSuccessMessage(
+        "✅ Two-factor authentication enabled! You'll receive a code via email on your next login."
+      );
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Error enabling 2FA:", err);
+        setError(err.message);
+      } else {
+        setError("Failed to enable 2FA. Please try again.");
+      }
+    } finally {
+      setToggling2FA(false);
+    }
+  };
+
+  // ✅ NEW: Open disable 2FA modal
+  const openDisable2FAModal = () => {
+    setFormData({ ...formData, disable2faPassword: "" });
+    setEditModal({ type: "disable2fa" });
+  };
+
+  // ✅ NEW: Disable 2FA
+  const handleDisable2FA = async () => {
+    if (!formData.disable2faPassword) {
+      setError("Password is required to disable 2FA");
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Authentication token not found. Please log in.");
+        return;
+      }
+
+      const response = await fetch(`${BACKEND_URL}/disable-2fa/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify({
+          password: formData.disable2faPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to disable 2FA");
+      }
+
+      setTwoFactorEnabled(false);
+      setSuccessMessage("✅ Two-factor authentication disabled successfully");
+
+      // Close modal after a short delay
+      setTimeout(() => {
+        closeModal();
+      }, 1500);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Error disabling 2FA:", err);
+        setError(err.message);
+      } else {
+        setError("Failed to disable 2FA. Please try again.");
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const openEditModal = (type: EditModalData["type"]) => {
+    if (!userSettings) return;
+
+    // Pre-fill form data based on type
+    switch (type) {
+      case "name":
+        setFormData({
+          ...formData,
+          firstName: userSettings.profile.first_name,
+          lastName: userSettings.profile.last_name,
+        });
+        break;
+      case "phone":
+        setFormData({ ...formData, phone: userSettings.profile.phone });
+        break;
+      case "country":
+        setFormData({ ...formData, country: userSettings.profile.country });
+        break;
+      case "btc":
+        setFormData({
+          ...formData,
+          cryptoAddress: userSettings.payment_methods.btc.address,
+        });
+        break;
+      case "eth":
+        setFormData({
+          ...formData,
+          cryptoAddress: userSettings.payment_methods.eth.address,
+        });
+        break;
+      case "usdt":
+        setFormData({
+          ...formData,
+          cryptoAddress: userSettings.payment_methods.usdt.address,
+          usdtNetwork:
+            userSettings.payment_methods.usdt.method_type || "USDT_TRC20",
+        });
+        break;
+      case "password":
+        setFormData({
+          ...formData,
+          oldPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        break;
+    }
+    setEditModal({ type });
+  };
+
+  const closeModal = () => {
+    setEditModal({ type: null });
+    setFormData({
+      firstName: "",
+      lastName: "",
+      phone: "",
+      country: "",
+      oldPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+      cryptoAddress: "",
+      usdtNetwork: "USDT_TRC20",
+      disable2faPassword: "",
+    });
+    setSuccessMessage(null);
+    setError(null);
+  };
+
+  const handleUpdate = async () => {
+    try {
+      setUpdating(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setError("Authentication token not found. Please log in.");
+        return;
+      }
+
+      let endpoint = "";
+      let body = {};
+
+      // Determine endpoint and body based on modal type
+      switch (editModal.type) {
+        case "name":
+          endpoint = `${BACKEND_URL}/settings/profile/`;
+          body = {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+          };
+          break;
+        case "phone":
+          endpoint = `${BACKEND_URL}/settings/profile/`;
+          body = { phone: formData.phone };
+          break;
+        case "country":
+          endpoint = `${BACKEND_URL}/settings/profile/`;
+          body = { country: formData.country };
+          break;
+        case "password":
+          endpoint = `${BACKEND_URL}/settings/password/`;
+          body = {
+            old_password: formData.oldPassword,
+            new_password: formData.newPassword,
+            confirm_password: formData.confirmPassword,
+          };
+          break;
+        case "btc":
+          endpoint = `${BACKEND_URL}/settings/payment-method/`;
+          body = {
+            method_type: "BTC",
+            address: formData.cryptoAddress,
+          };
+          break;
+        case "eth":
+          endpoint = `${BACKEND_URL}/settings/payment-method/`;
+          body = {
+            method_type: "ETH",
+            address: formData.cryptoAddress,
+          };
+          break;
+        case "usdt":
+          endpoint = `${BACKEND_URL}/settings/payment-method/`;
+          body = {
+            method_type: formData.usdtNetwork,
+            address: formData.cryptoAddress,
+          };
+          break;
+        default:
+          return;
+      }
+
+      const method = editModal.type === "password" ? "POST" : "PATCH";
+
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update");
+      }
+
+      setSuccessMessage(data.message || "Updated successfully");
+
+      // Refresh user settings
+      await fetchUserSettings();
+
+      // Close modal after a short delay
+      setTimeout(() => {
+        closeModal();
+      }, 1500);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Error updating:", err);
+        setError(err.message);
+      } else {
+        setError("Failed to update. Please try again.");
+      }
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#1a1f2e] dark:bg-gray-50 transition-colors pt-20">
+        <DashboardNavbar />
+        <div className="flex justify-center items-center h-[calc(100vh-200px)]">
+          <PulseLoader color="#10b981" size={15} />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !userSettings) {
+    return (
+      <div className="min-h-screen bg-[#1a1f2e] dark:bg-gray-50 transition-colors pt-20">
+        <DashboardNavbar />
+        <div className="flex flex-col justify-center items-center h-[calc(100vh-200px)] gap-4">
+          <p className="text-red-500 text-lg">{error}</p>
+          <button
+            onClick={fetchUserSettings}
+            className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userSettings) return null;
+
+  return (
+    <div className="min-h-screen bg-[#1a1f2e] dark:bg-gray-50 transition-colors pt-20">
+      <DashboardNavbar />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header */}
+        <h1 className="text-2xl sm:text-3xl font-bold text-white dark:text-gray-900 mb-6">
+          Account Settings
+        </h1>
+
+        {/* Global Success/Error Messages */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-400 text-sm">
+            {successMessage}
+          </div>
+        )}
+        {error && editModal.type === null && (
+          <div className="mb-4 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
+          <button
+            onClick={() => setActiveTab("profile")}
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-all ${
+              activeTab === "profile"
+                ? "bg-green-500 text-white"
+                : "bg-[#151922] dark:bg-gray-200 text-gray-400 dark:text-gray-600 hover:bg-gray-700 dark:hover:bg-gray-300"
+            }`}
+          >
+            Profile
+          </button>
+          <button
+            onClick={() => setActiveTab("security")}
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-all ${
+              activeTab === "security"
+                ? "bg-green-500 text-white"
+                : "bg-[#151922] dark:bg-gray-200 text-gray-400 dark:text-gray-600 hover:bg-gray-700 dark:hover:bg-gray-300"
+            }`}
+          >
+            Security
+          </button>
+          <button
+            onClick={() => setActiveTab("payment")}
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-semibold text-sm transition-all ${
+              activeTab === "payment"
+                ? "bg-green-500 text-white"
+                : "bg-[#151922] dark:bg-gray-200 text-gray-400 dark:text-gray-600 hover:bg-gray-700 dark:hover:bg-gray-300"
+            }`}
+          >
+            Payment Information
+          </button>
+        </div>
+
+        {/* Profile Tab */}
+        {activeTab === "profile" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white dark:text-gray-900 mb-4">
+              Account Information
+            </h2>
+
+            <div className="space-y-3">
+              {/* Full Name */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Full Name
+                    </div>
+                    <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900 truncate">
+                      {userSettings.profile.first_name}{" "}
+                      {userSettings.profile.last_name || ""}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openEditModal("name")}
+                    className="px-4 py-2 text-sm bg-slate-700 dark:bg-slate-300 text-white dark:text-gray-900 rounded-lg hover:bg-slate-600 dark:hover:bg-slate-400 transition-colors self-start sm:self-auto"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Email
+                    </div>
+                    <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900 truncate">
+                      {userSettings.profile.email}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Phone
+                    </div>
+                    <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900">
+                      {userSettings.profile.phone || "Not provided"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openEditModal("phone")}
+                    className="px-4 py-2 text-sm bg-slate-700 dark:bg-slate-300 text-white dark:text-gray-900 rounded-lg hover:bg-slate-600 dark:hover:bg-slate-400 transition-colors self-start sm:self-auto"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+
+              {/* Country */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Country
+                    </div>
+                    <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900">
+                      {userSettings.profile.country || "Not provided"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openEditModal("country")}
+                    className="px-4 py-2 text-sm bg-slate-700 dark:bg-slate-300 text-white dark:text-gray-900 rounded-lg hover:bg-slate-600 dark:hover:bg-slate-400 transition-colors self-start sm:self-auto"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+
+              {/* Account Status */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Account Status
+                    </div>
+                    <div
+                      className={`text-base sm:text-lg font-semibold ${
+                        userSettings.profile.is_verified
+                          ? "text-green-500"
+                          : "text-yellow-500"
+                      }`}
+                    >
+                      {userSettings.profile.account_status}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trading ID */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Trading ID
+                    </div>
+                    <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900 truncate">
+                      {userSettings.profile.account_id || "Not assigned"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Security Tab */}
+        {activeTab === "security" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white dark:text-gray-900 mb-2">
+              Security Settings
+            </h2>
+            <p className="text-sm text-gray-400 dark:text-gray-600 mb-4">
+              Manage your account security and authentication methods.
+            </p>
+
+            <div className="space-y-3">
+              {/* Login Email */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Login Email
+                    </div>
+                    <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900 truncate">
+                      {userSettings.profile.email}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Password
+                    </div>
+                    <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900">
+                      ••••••••
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openEditModal("password")}
+                    className="px-4 py-2 text-sm bg-slate-700 dark:bg-slate-300 text-white dark:text-gray-900 rounded-lg hover:bg-slate-600 dark:hover:bg-slate-400 transition-colors whitespace-nowrap self-start sm:self-auto"
+                  >
+                    Change Password
+                  </button>
+                </div>
+              </div>
+
+              {/* ✅ NEW: Two-Factor Authentication */}
+              <div className="bg-[#151922] mb-30 dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col gap-4">
+                  {/* Header */}
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-blue-500/10 dark:bg-blue-100 rounded-lg">
+                      <Shield className="w-5 h-5 text-blue-500 dark:text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-base sm:text-lg font-semibold text-white dark:text-gray-900 mb-1">
+                        Two-Factor Authentication (2FA)
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600">
+                        Add an extra layer of security to your account. You'll
+                        receive a verification code via email each time you log
+                        in.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status and Toggle */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-gray-700 dark:border-gray-300">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          twoFactorEnabled
+                            ? "bg-green-500/20 text-green-400 dark:bg-green-100 dark:text-green-700"
+                            : "bg-gray-500/20 text-gray-400 dark:bg-gray-200 dark:text-gray-600"
+                        }`}
+                      >
+                        {twoFactorEnabled ? "Enabled" : "Disabled"}
+                      </div>
+                      {twoFactorEnabled && (
+                        <div className="flex items-center gap-1 text-xs text-green-400 dark:text-green-600">
+                          <Lock className="w-3 h-3" />
+                          <span>Protected</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {!twoFactorEnabled ? (
+                      <button
+                        onClick={handleEnable2FA}
+                        disabled={toggling2FA}
+                        className="px-4 py-2 text-sm bg-white hover:bg-white dark:bg-black dark:hover:bg-black text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap self-start sm:self-auto"
+                      >
+                        {toggling2FA ? (
+                          <span className="flex items-center gap-2">
+                            <PulseLoader color="#ffffff" size={8} />
+                          </span>
+                        ) : (
+                          "Enable 2FA"
+                        )}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={openDisable2FAModal}
+                        className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-lg transition-colors whitespace-nowrap self-start sm:self-auto"
+                      >
+                        Disable 2FA
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Info Box */}
+                  {twoFactorEnabled && (
+                    <div className="bg-blue-500/10 dark:bg-blue-50 border border-blue-500/30 dark:border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-300 dark:text-blue-700">
+                        💡 <strong>Tip:</strong> Keep your email secure as it
+                        will be used to receive 2FA codes during login.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Payment Information Tab */}
+        {activeTab === "payment" && (
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white dark:text-gray-900 mb-2">
+              Withdrawal Addresses
+            </h2>
+            <p className="text-sm text-gray-400 dark:text-gray-600 mb-4">
+              Information for withdrawal methods available on your account
+            </p>
+
+            <div className="space-y-3">
+              {/* Bitcoin Address */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Bitcoin Address (BTC)
+                    </div>
+                    <div className="text-sm sm:text-base font-semibold text-white dark:text-gray-900 break-all">
+                      {userSettings.payment_methods.btc.address ||
+                        "No address added"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openEditModal("btc")}
+                    className="px-4 py-2 text-sm bg-slate-700 dark:bg-slate-300 text-white dark:text-gray-900 rounded-lg hover:bg-slate-600 dark:hover:bg-slate-400 transition-colors whitespace-nowrap self-start sm:self-auto"
+                  >
+                    {userSettings.payment_methods.btc.has_method
+                      ? "Edit"
+                      : "Add"}{" "}
+                    BTC Address
+                  </button>
+                </div>
+              </div>
+
+              {/* Ethereum Address */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      Ethereum Address (ETH)
+                    </div>
+                    <div className="text-sm sm:text-base font-semibold text-white dark:text-gray-900 break-all">
+                      {userSettings.payment_methods.eth.address ||
+                        "No address added"}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      {userSettings.payment_methods.eth.network}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openEditModal("eth")}
+                    className="px-4 py-2 text-sm bg-slate-700 dark:bg-slate-300 text-white dark:text-gray-900 rounded-lg hover:bg-slate-600 dark:hover:bg-slate-400 transition-colors whitespace-nowrap self-start sm:self-auto"
+                  >
+                    {userSettings.payment_methods.eth.has_method
+                      ? "Edit"
+                      : "Add"}{" "}
+                    ETH Address
+                  </button>
+                </div>
+              </div>
+
+              {/* USDT Address */}
+              <div className="bg-[#151922] dark:bg-white p-4 sm:p-5 rounded-lg border border-gray-700 dark:border-gray-300">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600 mb-1">
+                      USDT Address
+                    </div>
+                    <div className="text-sm sm:text-base font-semibold text-white dark:text-gray-900 break-all">
+                      {userSettings.payment_methods.usdt.address ||
+                        "No address added"}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      {userSettings.payment_methods.usdt.network}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => openEditModal("usdt")}
+                    className="px-4 py-2 text-sm bg-slate-700 dark:bg-slate-300 text-white dark:text-gray-900 rounded-lg hover:bg-slate-600 dark:hover:bg-slate-400 transition-colors whitespace-nowrap self-start sm:self-auto"
+                  >
+                    {userSettings.payment_methods.usdt.has_method
+                      ? "Edit"
+                      : "Add"}{" "}
+                    USDT Address
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Modals */}
+      {editModal.type && (
+        <div
+          className="fixed inset-0 bg-black/70 dark:bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-[#2a3441] dark:bg-gray-100 rounded-lg max-w-md w-full p-5 animate-fadeIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Success/Error Messages */}
+            {successMessage && (
+              <div className="mb-4 p-3 bg-green-500/20 border border-green-500 rounded-lg text-green-400 text-sm">
+                {successMessage}
+              </div>
+            )}
+            {error && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* ✅ NEW: Disable 2FA Modal */}
+            {editModal.type === "disable2fa" && (
+              <>
+                <h3 className="text-lg font-bold text-white dark:text-gray-900 mb-4">
+                  Disable Two-Factor Authentication
+                </h3>
+                <div className="mb-4 p-3 bg-amber-500/20 border border-amber-500 rounded-lg text-amber-300 dark:text-amber-700 text-sm">
+                  ⚠️ Disabling 2FA will reduce your account security. You'll
+                  only need your password to log in.
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                    Enter your password to confirm:
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.disable2faPassword}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        disable2faPassword: e.target.value,
+                      })
+                    }
+                    placeholder="Enter your password"
+                    className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={handleDisable2FA}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <PulseLoader color="#ffffff" size={8} />
+                      </span>
+                    ) : (
+                      "Disable 2FA"
+                    )}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-gray-600 hover:bg-gray-700 dark:bg-gray-300 dark:hover:bg-gray-400 text-white dark:text-gray-900 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Name Edit Modal */}
+            {editModal.type === "name" && (
+              <>
+                <h3 className="text-lg font-bold text-white dark:text-gray-900 mb-4">
+                  Edit Name
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                      First Name:
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.firstName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
+                      className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                      Last Name:
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.lastName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, lastName: e.target.value })
+                      }
+                      className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <PulseLoader color="#ffffff" size={8} />
+                      </span>
+                    ) : (
+                      "Update"
+                    )}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Phone Edit Modal */}
+            {editModal.type === "phone" && (
+              <>
+                <h3 className="text-lg font-bold text-white dark:text-gray-900 mb-4">
+                  Edit Phone Number
+                </h3>
+                <div>
+                  <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                    Phone:
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phone: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <PulseLoader color="#ffffff" size={8} />
+                      </span>
+                    ) : (
+                      "Update"
+                    )}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Country Edit Modal */}
+            {editModal.type === "country" && (
+              <>
+                <h3 className="text-lg font-bold text-white dark:text-gray-900 mb-4">
+                  Edit Country
+                </h3>
+                <div>
+                  <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                    Country:
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) =>
+                      setFormData({ ...formData, country: e.target.value })
+                    }
+                    className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <PulseLoader color="#ffffff" size={8} />
+                      </span>
+                    ) : (
+                      "Update"
+                    )}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Password Edit Modal */}
+            {editModal.type === "password" && (
+              <>
+                <h3 className="text-lg font-bold text-white dark:text-gray-900 mb-4">
+                  Change Password
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                      Current Password:
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.oldPassword}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          oldPassword: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                      New Password:
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.newPassword}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          newPassword: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                      Confirm Password:
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <PulseLoader color="#ffffff" size={8} />
+                      </span>
+                    ) : (
+                      "Update Password"
+                    )}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Crypto Address Edit Modals */}
+            {(editModal.type === "btc" || editModal.type === "eth") && (
+              <>
+                <h3 className="text-lg font-bold text-white dark:text-gray-900 mb-4">
+                  {editModal.type === "btc" &&
+                    `${
+                      userSettings?.payment_methods.btc.has_method
+                        ? "Edit"
+                        : "Add"
+                    } Bitcoin Address`}
+                  {editModal.type === "eth" &&
+                    `${
+                      userSettings?.payment_methods.eth.has_method
+                        ? "Edit"
+                        : "Add"
+                    } Ethereum Address`}
+                </h3>
+                <div>
+                  <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                    {editModal.type === "btc" && "Bitcoin Address:"}
+                    {editModal.type === "eth" && "Ethereum Address (ERC20):"}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.cryptoAddress}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        cryptoAddress: e.target.value,
+                      })
+                    }
+                    placeholder="Enter wallet address"
+                    className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <PulseLoader color="#ffffff" size={8} />
+                      </span>
+                    ) : (
+                      "Update"
+                    )}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* USDT Address Edit Modal with Network Selection */}
+            {editModal.type === "usdt" && (
+              <>
+                <h3 className="text-lg font-bold text-white dark:text-gray-900 mb-4">
+                  {userSettings?.payment_methods.usdt.has_method
+                    ? "Edit"
+                    : "Add"}{" "}
+                  USDT Address
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                      Network:
+                    </label>
+                    <select
+                      value={formData.usdtNetwork}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          usdtNetwork: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="USDT_TRC20">TRC20 (Tron)</option>
+                      <option value="USDT_ERC20">ERC20 (Ethereum)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">
+                      USDT Address:
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cryptoAddress}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cryptoAddress: e.target.value,
+                        })
+                      }
+                      placeholder="Enter wallet address"
+                      className="w-full px-3 py-2.5 text-sm bg-[#364153] dark:bg-gray-200 text-white dark:text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={handleUpdate}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <PulseLoader color="#ffffff" size={8} />
+                      </span>
+                    ) : (
+                      "Update"
+                    )}
+                  </button>
+                  <button
+                    onClick={closeModal}
+                    disabled={updating}
+                    className="flex-1 py-2.5 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+      `}</style>
+    </div>
+  );
+}
