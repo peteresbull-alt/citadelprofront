@@ -679,9 +679,9 @@ export default function SettingsPage() {
                         Two-Factor Authentication (2FA)
                       </div>
                       <div className="text-xs sm:text-sm text-gray-400 dark:text-gray-600">
-                        Add an extra layer of security to your account. You'll
-                        receive a verification code via email each time you log
-                        in.
+                        Add an extra layer of security to your account.
+                        You&apos;ll receive a verification code via email each
+                        time you log in.
                       </div>
                     </div>
                   </div>
@@ -867,8 +867,8 @@ export default function SettingsPage() {
                   Disable Two-Factor Authentication
                 </h3>
                 <div className="mb-4 p-3 bg-amber-500/20 border border-amber-500 rounded-lg text-amber-300 dark:text-amber-700 text-sm">
-                  ⚠️ Disabling 2FA will reduce your account security. You'll
-                  only need your password to log in.
+                  ⚠️ Disabling 2FA will reduce your account security.
+                  You&apos;ll only need your password to log in.
                 </div>
                 <div>
                   <label className="block text-xs sm:text-sm text-gray-300 dark:text-gray-700 mb-1.5">

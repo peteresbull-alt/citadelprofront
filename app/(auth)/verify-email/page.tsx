@@ -265,7 +265,7 @@ export default function VerifyEmailPage() {
             </div>
             <h1 className="text-3xl font-bold">Verify Your Email</h1>
             <p className="text-gray-400 dark:text-gray-600">
-              We've sent a 4-digit verification code to your email
+              We&apos;ve sent a 4-digit verification code to your email
             </p>
           </div>
 
@@ -322,9 +322,11 @@ export default function VerifyEmailPage() {
               <div className="flex gap-3">
                 <AlertCircle className="w-5 h-5 text-blue-400 dark:text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-200 dark:text-blue-800">
-                  <p className="font-semibold mb-1">Didn't receive the code?</p>
+                  <p className="font-semibold mb-1">
+                    Didn&apos;t receive the code?
+                  </p>
                   <p>
-                    Check your spam folder or click "Resend Code" to get a new
+                    Check your spam folder or click &quot;Resend Code&quot; to get a new
                     one.
                   </p>
                   <p className="mt-2">The code expires in 10 minutes.</p>

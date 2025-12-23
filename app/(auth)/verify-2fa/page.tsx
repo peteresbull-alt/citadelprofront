@@ -256,7 +256,7 @@ export default function Verify2FAPage() {
                     minutes.
                   </p>
                   <p className="mt-2">
-                    If you didn't request this login, your account may be
+                    If you didn&apos;t request this login, your account may be
                     compromised.
                   </p>
                 </div>
