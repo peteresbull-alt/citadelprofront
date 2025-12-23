@@ -174,13 +174,12 @@ function RegisterPageContent() {
     fetchCountry();
   }, [countryOptions, setValue]);
 
-  // Update the onSubmit function to include country_calling_code:
+
   // const onSubmit = async (data: RegisterFormData) => {
   //   setLoading(true);
   //   setMessage(null);
 
   //   try {
-  //     // Get country calling code from localStorage
   //     const countryCallingCode =
   //       localStorage.getItem("country_calling_code") || "";
 
@@ -191,7 +190,7 @@ function RegisterPageContent() {
   //       password: data.password,
   //       country: data.country.label,
   //       referral_code: referralCode || undefined,
-  //       country_calling_code: countryCallingCode, // ADD THIS
+  //       country_calling_code: countryCallingCode,
   //     };
 
   //     const res = await fetch(`${BACKEND_URL}/register/`, {
@@ -216,9 +215,12 @@ function RegisterPageContent() {
   //       throw new Error(errorMessage);
   //     }
 
-  //     setMessage("✅ Registration successful! Redirecting...");
+  //     // ✅ NEW: Show success message about email verification
+  //     setMessage(
+  //       "✅ Registration successful! Please check your email for verification code."
+  //     );
 
-  //     // Save token and country calling code
+  //     // Save token
   //     if (typeof window !== "undefined") {
   //       localStorage.setItem("authToken", result.token);
   //       if (result.user?.country_calling_code) {
@@ -230,8 +232,8 @@ function RegisterPageContent() {
   //       localStorage.removeItem("referral_code");
   //     }
 
-  //     // Redirect
-  //     setTimeout(() => router.push("/onboarding"), 1500);
+  //     // ✅ NEW: Redirect to email verification page instead of onboarding
+  //     setTimeout(() => router.push("/verify-email"), 1500);
   //   } catch (error: unknown) {
   //     let errorMessage = "Something went wrong. Please try again.";
   //     if (error instanceof Error) {
@@ -243,6 +245,7 @@ function RegisterPageContent() {
   //     setLoading(false);
   //   }
   // };
+
 
   const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
@@ -284,12 +287,10 @@ function RegisterPageContent() {
         throw new Error(errorMessage);
       }
 
-      // ✅ NEW: Show success message about email verification
-      setMessage(
-        "✅ Registration successful! Please check your email for verification code."
-      );
+      // ✅ Registration successful - NO email verification needed
+      setMessage("✅ Registration successful! Redirecting...");
 
-      // Save token
+      // Save token and user data
       if (typeof window !== "undefined") {
         localStorage.setItem("authToken", result.token);
         if (result.user?.country_calling_code) {
@@ -301,8 +302,8 @@ function RegisterPageContent() {
         localStorage.removeItem("referral_code");
       }
 
-      // ✅ NEW: Redirect to email verification page instead of onboarding
-      setTimeout(() => router.push("/verify-email"), 1500);
+      // ✅ Redirect directly to onboarding (skip email verification entirely)
+      setTimeout(() => router.push("/onboarding"), 1500);
     } catch (error: unknown) {
       let errorMessage = "Something went wrong. Please try again.";
       if (error instanceof Error) {

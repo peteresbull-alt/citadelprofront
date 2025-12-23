@@ -710,11 +710,11 @@ export default function SettingsPage() {
                       <button
                         onClick={handleEnable2FA}
                         disabled={toggling2FA}
-                        className="px-4 py-2 text-sm bg-white hover:bg-white dark:bg-black dark:hover:bg-black text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap self-start sm:self-auto"
+                        className="px-4 py-2 text-sm bg-white hover:bg-white dark:bg-black dark:hover:bg-black text-black dark:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap self-start sm:self-auto"
                       >
                         {toggling2FA ? (
                           <span className="flex items-center gap-2">
-                            <PulseLoader color="#ffffff" size={8} />
+                            <PulseLoader color="#000" size={8} />
                           </span>
                         ) : (
                           "Enable 2FA"

@@ -17,15 +17,13 @@ export default function UnprotectedAuthRoute({
     const checkAuthStatus = async () => {
       const token = localStorage.getItem("authToken");
 
-      // ✅ No token → stay on login/register page
       if (!token) {
         setChecking(false);
         return;
       }
 
-      // ✅ Has token → validate it and check email verification
       try {
-        const response = await fetch(`${BACKEND_URL}/validate-token/`, {
+        const response = await fetch(`${BACKEND_URL}/api/validate-token/`, {
           method: "GET",
           headers: {
             Authorization: `Token ${token}`,
@@ -33,36 +31,15 @@ export default function UnprotectedAuthRoute({
         });
 
         if (!response.ok) {
-          // ✅ Invalid token → remove and stay on page
-          console.log("UnprotectedAuthRoute: Invalid token, removing...");
           localStorage.removeItem("authToken");
           setChecking(false);
           return;
         }
 
-        const data = await response.json();
-        console.log("UnprotectedAuthRoute: User data:", data);
-
-        // ✅ Check email verification status
-        if (data.user?.email_verified === false) {
-          console.log(
-            "UnprotectedAuthRoute: Email not verified, redirecting to /verify-email"
-          );
-          router.push("/verify-email");
-          return;
-        }
-
-        // ✅ Email verified → redirect to portfolio
-        console.log(
-          "UnprotectedAuthRoute: Email verified, redirecting to /portfolio"
-        );
+        // ✅ Valid token - redirect to portfolio (no email verification check)
         router.push("/portfolio");
       } catch (error) {
-        console.error(
-          "UnprotectedAuthRoute: Error checking auth status:",
-          error
-        );
-        // ✅ Network error → stay on page
+        console.error("Error checking auth status:", error);
         setChecking(false);
       }
     };
@@ -70,7 +47,6 @@ export default function UnprotectedAuthRoute({
     checkAuthStatus();
   }, [router]);
 
-  // ✅ Show loading while checking
   if (checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#090909] dark:bg-white">

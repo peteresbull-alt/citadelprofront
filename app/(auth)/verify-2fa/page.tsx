@@ -9,6 +9,8 @@ import {
   RefreshCw,
   CheckCircle,
   AlertCircle,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
@@ -179,17 +181,17 @@ export default function Verify2FAPage() {
               className="fixed top-5 right-5 p-2 rounded-md border border-gray-700 dark:border-gray-300 hover:bg-gray-800 dark:hover:bg-gray-100 transition-all"
             >
               {theme === "light" ? (
-                <Shield className="w-4 h-4 text-emerald-500" />
+                <Moon className="w-4 h-4 text-emerald-500" />
               ) : (
-                <Shield className="w-4 h-4 text-emerald-400" />
+                <Sun className="w-4 h-4 text-emerald-400" />
               )}
             </button>
           )}
 
           {/* Header */}
           <div className="text-center space-y-2">
-            <div className="w-20 h-20 bg-blue-900/20 dark:bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Shield className="w-10 h-10 text-blue-500 dark:text-blue-600" />
+            <div className="w-20 h-20 bg-emerald-900/20 dark:bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-10 h-10 text-emerald-500 dark:text-emerald-600" />
             </div>
             <h1 className="text-3xl font-bold">Two-Factor Authentication</h1>
             <p className="text-gray-400 dark:text-gray-600">
@@ -210,7 +212,7 @@ export default function Verify2FAPage() {
                   value={digit}
                   onChange={(e) => handleCodeChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-16 h-16 text-center text-2xl font-bold border-2 rounded-lg bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-700 dark:border-gray-400 transition-all"
+                  className="w-16 h-16 text-center text-2xl font-bold border-2 rounded-lg bg-transparent focus:outline-none focus:ring-2 focus:ring-emerald-500 border-gray-700 dark:border-gray-400 transition-all"
                 />
               ))}
             </div>
@@ -219,7 +221,7 @@ export default function Verify2FAPage() {
             <Button
               onClick={handleVerify}
               disabled={loading || code.some((d) => !d)}
-              className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-6 bg-emerald-700 hover:bg-emerald-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <PulseLoader color="#fff" size={15} />
@@ -236,7 +238,7 @@ export default function Verify2FAPage() {
               <button
                 onClick={handleResendCode}
                 disabled={resending}
-                className="text-blue-500 hover:underline disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
+                className="text-emerald-500 hover:underline disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
               >
                 <RefreshCw
                   className={`w-4 h-4 ${resending ? "animate-spin" : ""}`}
@@ -267,7 +269,7 @@ export default function Verify2FAPage() {
             <div className="text-center">
               <Link
                 href="/login"
-                className="text-gray-400 dark:text-gray-600 hover:text-blue-500 flex items-center justify-center gap-2"
+                className="text-gray-400 dark:text-gray-600 hover:text-emerald-500 flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Login
@@ -278,7 +280,7 @@ export default function Verify2FAPage() {
       </div>
 
       {/* Right side: Visual section */}
-      <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-blue-800 to-blue-950 dark:from-blue-800 dark:to-blue-900 p-8 rounded-l-3xl">
+      <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-emerald-800 to-emerald-950 dark:from-emerald-800 dark:to-emerald-900 p-8 rounded-l-3xl">
         <motion.div
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}

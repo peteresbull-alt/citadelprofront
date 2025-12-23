@@ -45,75 +45,6 @@ export default function LoginPage() {
   const passwordValue = watch("password");
 
 
-  // const onSubmit = async (data: FormValues) => {
-  //   const newData = { email: data.email, password: data.password };
-
-  //   try {
-  //     setLoading(true);
-
-  //     const response = await fetch(`${BACKEND_URL}/login/`, {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify(newData),
-  //     });
-
-  //     const result = await response.json();
-
-  //     if (!response.ok) {
-  //       // ✅ CHECK: If email not verified
-  //       if (result?.requires_verification) {
-  //         toast("Email Not Verified", {
-  //           description: "Please verify your email before logging in",
-  //         });
-
-  //         // Redirect to verify email page
-  //         setTimeout(() => {
-  //           router.push("/verify-email");
-  //         }, 1500);
-  //         return;
-  //       }
-
-  //       const backendError =
-  //         result?.error || "Something went wrong. Please try again.";
-
-  //       toast("Error", {
-  //         description: backendError,
-  //       });
-  //       return;
-  //     }
-
-  //     // ✅ CHECK: If 2FA is required
-  //     if (result?.requires_2fa) {
-  //       toast("2FA Required", {
-  //         description: "Please check your email for verification code",
-  //       });
-
-  //       // Redirect to 2FA verification page with email in URL
-  //       setTimeout(() => {
-  //         router.push(`/verify-2fa?email=${encodeURIComponent(data.email)}`);
-  //       }, 1500);
-  //       return;
-  //     }
-
-  //     // ✅ Normal login (no 2FA)
-  //     // Save token
-  //     localStorage.setItem("authToken", result.token);
-
-  //     toast("Success", {
-  //       description: "✅ Login successful",
-  //     });
-  //     router.push("/portfolio");
-  //   } catch (error) {
-  //     console.error(error);
-  //     toast("Network Error", {
-  //       description: "⚠️ Network error. Please try again.",
-  //     });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  
   const onSubmit = async (data: FormValues) => {
     const newData = { email: data.email, password: data.password };
 
@@ -129,24 +60,13 @@ export default function LoginPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        if (result?.requires_verification) {
-          toast.error("Please verify your email before logging in");
-
-          // ✅ SAVE TOKEN even for unverified users (they need it to verify)
-          localStorage.setItem("authToken", result.token);
-
-          setTimeout(() => {
-            router.push("/verify-email");
-          }, 1500);
-          return;
-        }
-
         const backendError =
           result?.error || "Something went wrong. Please try again.";
         toast.error(backendError);
         return;
       }
 
+      // ✅ Check ONLY for 2FA (no email verification)
       if (result?.requires_2fa) {
         toast.info("2FA code sent to your email");
         setTimeout(() => {
@@ -155,7 +75,7 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Normal login (email verified)
+      // ✅ Normal login - redirect to portfolio
       localStorage.setItem("authToken", result.token);
       toast.success("✅ Login successful");
       router.push("/portfolio");
