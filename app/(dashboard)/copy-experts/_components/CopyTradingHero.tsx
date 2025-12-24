@@ -83,27 +83,40 @@ export default function CopyTradingHero() {
     "experts"
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [traders, setTraders] = useState<Trader[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch traders from API
+  // ✅ Debounce search input (wait 500ms after user stops typing)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // ✅ Fetch traders when debounced search changes
   useEffect(() => {
     fetchTraders();
-  }, [searchQuery]);
+  }, [debouncedSearch]);
 
   const fetchTraders = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams();
-      if (searchQuery.trim()) {
-        params.append("search", searchQuery.trim());
+      // Build URL with search parameter
+      let url = `${BACKEND_URL}/traders/`;
+
+      if (debouncedSearch.trim()) {
+        url += `?search=${encodeURIComponent(debouncedSearch.trim())}`;
       }
 
-      const url = `${BACKEND_URL}/traders/?${params.toString()}`;
+      console.log("🔍 Fetching traders from:", url); // DEBUG
+
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -111,10 +124,13 @@ export default function CopyTradingHero() {
       }
 
       const data = await response.json();
+      console.log("✅ Traders received:", data.length, "traders"); // DEBUG
+      console.log("📊 Search query:", debouncedSearch); // DEBUG
+
       setTraders(data);
     } catch (err) {
       setError("Failed to load traders. Please try again later.");
-      console.error("Error fetching traders:", err);
+      console.error("❌ Error fetching traders:", err);
     } finally {
       setLoading(false);
     }
@@ -138,30 +154,8 @@ export default function CopyTradingHero() {
           alt="copytrading-banner"
           width={588}
           height={463}
-          className="mx-auto w-full  md:w-100"
+          className="mx-auto w-full md:w-100"
         />
-
-        {/* <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
-            Discover World Best Expert Traders
-          </h1>
-          <p className="text-lg sm:text-xl capitalize text-slate-300 mb-8 max-w-3xl mx-auto">
-            Follow and copy top traders on Citadel Markets Pro and actively enjoy
-            seamless trading
-          </p>
-
-          
-          <div className="max-w-2xl mx-auto relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/40 dark:bg-white border border-slate-700/50 dark:border-slate-300 rounded-xl pl-12 pr-4 py-4 text-slate-100 dark:text-slate-900 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-green-500 dark:focus:border-green-600 transition-all"
-            />
-          </div>
-        </div> */}
       </div>
 
       {/* Tabs */}
@@ -200,6 +194,38 @@ export default function CopyTradingHero() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {activeTab === "experts" ? (
           <>
+            {/* Search Bar */}
+            <div className="max-w-2xl mx-auto mb-8 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search traders by name or username..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-slate-800/40 dark:bg-white border border-slate-700/50 dark:border-slate-300 rounded-xl pl-12 pr-4 py-4 text-slate-100 dark:text-slate-900 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-green-500 dark:focus:border-green-600 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 dark:hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Search Query Display (for debugging) */}
+            {debouncedSearch && (
+              <div className="max-w-2xl mx-auto mb-4 text-center">
+                <p className="text-sm text-slate-400 dark:text-slate-600">
+                  Searching for:{" "}
+                  <span className="font-semibold text-green-500">
+                    "{debouncedSearch}"
+                  </span>
+                </p>
+              </div>
+            )}
+
             {/* Loading State */}
             {loading && (
               <div className="flex justify-center items-center py-20">
@@ -224,8 +250,18 @@ export default function CopyTradingHero() {
             {!loading && !error && traders.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-slate-400 dark:text-slate-600 text-lg">
-                  No traders found matching your criteria
+                  {debouncedSearch
+                    ? `No traders found matching "${debouncedSearch}"`
+                    : "No traders found"}
                 </p>
+                {debouncedSearch && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="mt-4 px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                  >
+                    Clear Search
+                  </button>
+                )}
               </div>
             )}
 
@@ -334,16 +370,6 @@ export default function CopyTradingHero() {
                           Trades
                         </div>
                       </div>
-
-                      {/* Inv. Capital */}
-                      {/* <div className="text-center">
-                        <div className="text-sm md:text-lg font-semibold text-slate-200 dark:text-slate-700 mb-1">
-                          {trader.capital}
-                        </div>
-                        <div className="text-xs md:text-sm text-slate-400 dark:text-slate-600">
-                          Inv. Capital
-                        </div>
-                      </div> */}
                     </div>
 
                     {/* Footer with Copiers and View Button */}
@@ -353,7 +379,7 @@ export default function CopyTradingHero() {
                       </span>
                       <Link
                         href={`/copy-experts/${trader.id}`}
-                        className="px-3 py-2 text-sm inline-block dark:no-underline underline rounded border-green-500  bg-transparent dark:hover:bg-green-600 hover:text-white text-green-600 font-medium shadow-lg hover:shadow-green-500/50 dark:hover:shadow-green-500/30 transition-all"
+                        className="px-3 py-2 text-sm inline-block dark:no-underline underline rounded border-green-500 bg-transparent dark:hover:bg-green-600 hover:text-white text-green-600 font-medium shadow-lg hover:shadow-green-500/50 dark:hover:shadow-green-500/30 transition-all"
                       >
                         View
                       </Link>

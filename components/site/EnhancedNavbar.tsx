@@ -50,8 +50,8 @@ export default function EnhancedNavbar() {
       className={cn(
         "fixed top-0 left-0 w-full z-50 transition-all duration-500",
         scrolled
-          ? "backdrop-blur-xl bg-white/80 dark:bg-black/80 shadow-lg shadow-emerald-500/5"
-          : "backdrop-blur-lg bg-white/10 dark:bg-black/30",
+          ? "bg-white dark:bg-black/80 shadow-lg shadow-emerald-500/5"
+          : " bg-white dark:bg-black/30",
         "border-b border-emerald-500/20"
       )}
     >
@@ -227,6 +227,9 @@ export default function EnhancedNavbar() {
                       >
                         License agreement and terms
                       </ListItem>
+                      <ListItem href="/regulations" title="Regulations">
+                        Trading Regulations
+                      </ListItem>
                     </ul>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
@@ -395,6 +398,12 @@ export default function EnhancedNavbar() {
                   onClick={() => setIsOpen(false)}
                 >
                   End-User License Agreement
+                </MobileNavLink>
+                <MobileNavLink
+                  href="/regulations"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Trading Regulations
                 </MobileNavLink>
               </MobileDropdown>
 
