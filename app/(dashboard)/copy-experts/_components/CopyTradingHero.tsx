@@ -220,7 +220,7 @@ export default function CopyTradingHero() {
                 <p className="text-sm text-slate-400 dark:text-slate-600">
                   Searching for:{" "}
                   <span className="font-semibold text-green-500">
-                    "{debouncedSearch}"
+                    &quot;{debouncedSearch}&quot;
                   </span>
                 </p>
               </div>
