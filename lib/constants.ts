@@ -1,6 +1,17 @@
+// lib/constants.ts
+
 export const ALPHA_ADVANTAGE_API_KEY = process.env.ALPHA_ADVANTAGE_API_KEY;
 
-export const BACKEND_URL = process.env.NEXT_PUBLIC_APP_BACKEND_URL;
+// ✅ Add fallback for production
+export const BACKEND_URL =
+  process.env.NEXT_PUBLIC_APP_BACKEND_URL ||
+  "https://citadelproadmin.vercel.app/api";
+
+// ✅ Debug log (remove after testing)
+if (typeof window !== "undefined") {
+  console.log("🔧 BACKEND_URL:", BACKEND_URL);
+  console.log("🔧 ENV VAR:", process.env.NEXT_PUBLIC_APP_BACKEND_URL);
+}
 
 // Grouped instruments (like desktop Sidebar)
 export const assets = {
