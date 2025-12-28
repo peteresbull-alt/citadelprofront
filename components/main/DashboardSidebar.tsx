@@ -100,26 +100,31 @@ const DashboardSidebar = () => {
       label: "Pro Traders",
       href: "/copy-experts",
     },
-    {
-      id: "copy-trade-history",
-      label: "Copy Trade History",
-      href: "/copy-trade-history",
-    },
+    // {
+    //   id: "copy-trade-history",
+    //   label: "Copy Trade History",
+    //   href: "/copy-trade-history",
+    // },
     {
       id: "trade",
       label: "Trade Stocks",
       href: "/stock",
     },
-    {
-      id: "orders",
-      label: "Current Orders",
-      href: "/orders",
-    },
+    // {
+    //   id: "orders",
+    //   label: "Current Orders",
+    //   href: "/orders",
+    // },
     {
       id: "trade-history",
-      label: "Stock History",
-      href: "/trade-history",
+      label: "Trade History",
+      href: "/history",
     },
+    // {
+    //   id: "trade-history",
+    //   label: "Stock History",
+    //   href: "/trade-history",
+    // },
     {
       id: "signal",
       label: "Signals",
